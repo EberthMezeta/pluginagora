@@ -29,6 +29,9 @@ $form = new pluginagora_form();
 $toform['blockid'] = $blockid;
 $toform['courseid'] = $courseid;
 $toform['fileslist'] = [];
+$toform['token'] = "";
+
+
 $form->set_data($toform);
 
 if ($form->is_cancelled()) {
@@ -56,6 +59,13 @@ if ($form->is_cancelled()) {
         "extension" => "",
     );
 
+    $auto =  "Authorization: Bearer ". $fromform->token;
+
+
+    $headers = array(
+        $auto 
+    );
+
     foreach ($list_ids as $id) {
         $file = $fs->get_file_by_id($id);
         $contenthash = $file->get_contenthash();
@@ -69,6 +79,7 @@ if ($form->is_cancelled()) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, "http://127.0.0.1:8000/api/catch");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
         $output = curl_exec($ch);
         print_r($output);
