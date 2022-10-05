@@ -18,7 +18,7 @@ if (!$course = $DB->get_record('course', array('id' => $courseid))) {
 
 require_login($course);
 
-$userid = $USER->id; //obtenemos el id del usuario esta madre es 2
+$userid = $USER->id; //obtenemos el id del usuario es 2
 
 $PAGE->set_url('/blocks/pluginagora/view.php', array('id' => $courseid));
 $PAGE->set_pagelayout('standard');

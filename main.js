@@ -1,5 +1,10 @@
+const URL_SERVICE_LOGIN = "http://localhost/moodle4/blocks/pluginagora/services/login.php";
+const URL_SERVICE_LOGOUT = "http://localhost/moodle4/blocks/pluginagora/services/logout.php";
+
 const FORM = document.getElementsByClassName('mform')[0];
 const HiddenList = document.getElementsByName('fileslist')[0];
+const NAVBAR = document.getElementsByClassName("secondary-navigation d-print-none")[0];
+
 
 const TOKENHIDDEN = document.getElementsByName('token')[0];
 
@@ -8,7 +13,7 @@ const PASSWORD_INPUT = document.getElementById("id_password");
 
 const LOGIN_BTN = document.getElementById("id_loginBTN");
 const LOGOUT_BTN = document.getElementById("id_logoutBTN");
-
+const BUTTON_CANCEL = document.getElementById("id_cancel");
 
 const USERNAME_CONTAINER = document.getElementById("fitem_id_usuario");
 const PASSWORD_CONTAINER = document.getElementById("fitem_id_password");
@@ -19,6 +24,9 @@ const SUBMIT_BUTTONAR_CONTAINER = document.getElementById("fgroup_id_buttonar");
 const CHECKBOX_CONTAINERS = document.getElementsByClassName("checkbox");
 
 console.log(FORM);
+NAVBAR.style.display = "none";
+
+BUTTON_CANCEL.value = "Cancelar";
 
 var ids = [];
 var access_token = "";
@@ -78,7 +86,7 @@ LOGIN_BTN.addEventListener("click", () => {
       formData.append("password", password);
   
       const response = await fetch(
-        "http://localhost/moodle4/blocks/pluginagora/services/login.php",
+        URL_SERVICE_LOGIN,
         {
           method: "POST",
           body: formData,
@@ -115,7 +123,7 @@ LOGIN_BTN.addEventListener("click", () => {
       formData.append("access_token", access_token);
   
       const response = await fetch(
-        "http://localhost/moodle4/blocks/pluginagora/services/logout.php",
+        URL_SERVICE_LOGOUT,
         {
           method: "POST",
           body: formData,
@@ -164,6 +172,7 @@ LOGIN_BTN.addEventListener("click", () => {
 
   const showForm = async () => {
     SUBMIT_BUTTONAR_CONTAINER.style.display = "";
+
     CHECKBOX_CONTAINERS.forEach((element) => {
         element.style.display = "";
     });
