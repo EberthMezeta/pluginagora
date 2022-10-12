@@ -18,7 +18,7 @@ if (!$course = $DB->get_record('course', array('id' => $courseid))) {
 
 require_login($course);
 
-$userid = $USER->id; //obtenemos el id del usuario es 2
+$userid = $USER->id;
 
 $PAGE->set_url('/blocks/pluginagora/view.php', array('id' => $courseid));
 $PAGE->set_pagelayout('standard');
@@ -30,6 +30,7 @@ $toform['blockid'] = $blockid;
 $toform['courseid'] = $courseid;
 $toform['fileslist'] = [];
 $toform['token'] = "";
+$toform['iduser'] = "";
 
 
 $form->set_data($toform);
@@ -38,8 +39,7 @@ if ($form->is_cancelled()) {
     $courseurl = new moodle_url('/course/view.php', array('id' => $courseid));
     redirect($courseurl);
 } else if ($fromform = $form->get_data()) {
-
-    print_object($fromform);
+    
     $string_ids = $fromform->fileslist;
     $list_ids = explode(',', $string_ids);
 
@@ -57,6 +57,7 @@ if ($form->is_cancelled()) {
         "comment" => "",
         "state" => "privado",
         "extension" => "",
+        "id_user" => "",
     );
 
     $auto =  "Authorization: Bearer ". $fromform->token;
@@ -66,15 +67,52 @@ if ($form->is_cancelled()) {
         $auto 
     );
 
+    $files_sends = "";
+
     foreach ($list_ids as $id) {
+
+        $sql = 'SELECT cm.id, cm.course, cm.module, mdl.name AS type, 
+        CASE 
+            WHEN mf.name IS NOT NULL THEN mf.name
+            WHEN mb.name IS NOT NULL THEN mb.name
+            WHEN mr.name IS NOT NULL THEN mr.name
+            WHEN mu.name IS NOT NULL THEN mu.name
+            WHEN mq.name IS NOT NULL THEN mq.name
+            WHEN mp.name IS NOT NULL THEN mp.name
+            WHEN ml.name IS NOT NULL THEN ml.name
+            ELSE NULL
+        END AS activityname, mr.intro as description,
+        f.id AS fileid, f.filepath, f.filename,CONCAT("/filedir/", SUBSTRING(f.contenthash, 1, 2), "/", SUBSTRING(f.contenthash, 3, 2), "/", f.contenthash) AS filesystempath, f.userid AS fileuserid, f.filesize, f.mimetype, f.author AS fileauthor, f.timecreated, f.timemodified
+        FROM {course_modules} AS cm
+        INNER JOIN {context} AS ctx ON ctx.contextlevel = 70 AND ctx.instanceid = cm.id
+        INNER JOIN {modules} AS mdl ON cm.module = mdl.id
+        LEFT JOIN {forum} AS mf ON mdl.name = "forum" AND cm.instance = mf.id
+        LEFT JOIN {book} AS mb ON mdl.name = "book" AND cm.instance = mb.id
+        LEFT JOIN {resource} AS mr ON mdl.name = "resource" AND cm.instance = mr.id
+        LEFT JOIN {url} AS mu ON mdl.name = "url" AND cm.instance = mu.id
+        LEFT JOIN {quiz} AS mq ON mdl.name = "quiz" AND cm.instance = mq.id
+        LEFT JOIN {page} AS mp ON mdl.name = "page" AND cm.instance = mp.id
+        LEFT JOIN {lesson} AS ml ON mdl.name = "lesson" AND cm.instance = ml.id
+        LEFT JOIN {files} AS f ON f.contextid = ctx.id
+        WHERE cm.course = ? AND mdl.name = ? AND filename != "." AND f.id = ?
+        ';
+
+        $file_from_bd = $DB->get_record_sql($sql, [$COURSE->id, 'resource', $id]);
+
         $file = $fs->get_file_by_id($id);
-        $contenthash = $file->get_contenthash();
-        $postData["file"] =  new CURLFile($CFG->dataroot . '/filedir/' . substr($contenthash, 0, 2) . '/' . substr($contenthash, 2, 2) . '/' . $contenthash);
-        $postData["filename"] = $file->get_filename();
-        $postData["size"] = $file->get_filesize();
+        
+        //$contenthash = $file->get_contenthash();
+        $postData["file"] =  new CURLFile($CFG->dataroot . $file_from_bd->filesystempath);
+        //$postData["file"] =  new CURLFile($CFG->dataroot . '/filedir/' . substr($contenthash, 0, 2) . '/' . substr($contenthash, 2, 2) . '/' . $contenthash);
+        $postData["filename"] = $file_from_bd->filename;
+        $postData["size"] = $file_from_bd->filesize;
+        $postData["title"] = $file_from_bd->activityname;
+        $postData["description"] = strip_tags($file_from_bd->description);
 
         $extension = pathinfo($file->get_filename(), PATHINFO_EXTENSION);
         $postData["extension"] = $extension;
+        $postData["id_user"] = $fromform->iduser;
+        
   
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, "http://127.0.0.1:8000/api/catch");
@@ -82,9 +120,23 @@ if ($form->is_cancelled()) {
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
         $output = curl_exec($ch);
-        print_r($output);
         curl_close($ch);
+
+        if ($output == 1) {
+            $files_sends.= "El arhivo '" .$file_from_bd->activityname . "' se ha subido correctamente <br>";
+        }else{
+            $files_sends.= "El arhivo '" .$file_from_bd->activityname . "' no se ha subido correctamente <br>";
+        }
+        
     }
+    $courseurl = new moodle_url('/course/view.php', array('id' => $courseid));
+    echo $OUTPUT->header();
+    echo $OUTPUT->heading("Lista de archivos enviados");
+    echo $OUTPUT->box($files_sends);
+    echo $OUTPUT->single_button($courseurl, "Volver al curso");
+    echo $OUTPUT->footer();
+    
+
 
 } else {
     $site = get_site();

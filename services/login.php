@@ -40,7 +40,8 @@ try {
     if ($respArray['status']==1) {
         $response = [
             "status" => true,
-            "access_token" =>  $respArray['access_token']
+            "access_token" =>  $respArray['access_token'],
+            "id_user" =>  $respArray['id_user']
         ];
     }else{
         $response = [
